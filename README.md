@@ -6,17 +6,19 @@ This allows the shellcode to bypass common input validation techniques
 
 ## Usage
 
-  Put Payload Script in payload.s and run:
+  Run:
   
-      python3 generate.py
+      python3 generate.py [payload source]
 
-  A demonstration payload is included
+  Two demonstration payloads are included
 
-  It outputs the generated ARM source to arm.s, the outputted shellcode to arm.bin, and generates a executable for testing
+  It outputs the generated ARM source to arm.s, the outputted shellcode to arm.bin, and generates an ELF executable for testing
 
 ## Dependencies
 
-	This required the "arm-linux-gnueabihf" GNU toolchain, as the script makes system calls to arm-linux-gnueabihf-as, ld and objcopy
+	Requires Python 3. Built with Python 3.6.8
+	This requires the "arm-linux-gnueabihf" GNU toolchain, as the script makes system calls to arm-linux-gnueabihf-as, ld and objcopy
+	Optionally requires qemu-arm or a physical ARM processor to run the executable or shellcode
   
 ## Notes
 
@@ -26,4 +28,4 @@ This allows the shellcode to bypass common input validation techniques
   
   All of the shellcode in the payload must be in the .text section
   
-  In addition to this the execution of the payload starts in ARM mode, not Thumb mode
+  In addition to this, the execution of the payload starts in ARM mode, not Thumb mode

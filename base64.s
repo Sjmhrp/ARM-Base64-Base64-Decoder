@@ -1,6 +1,6 @@
 .THUMB
 
-	add r1, pc, #216
+	add r1, pc, #168
 	add r2, pc, #168
 
 base64_decode:

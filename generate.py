@@ -1,4 +1,4 @@
-import os, random, string, binascii, re, base64
+import os, random, string, binascii, re, base64, sys
 
 def randChar():
 	return random.choice(string.ascii_uppercase+string.ascii_lowercase+string.digits+"+/=").encode("ascii")
@@ -18,7 +18,7 @@ def randInstruction():
 	return result
 
 decoderBytes = ["02", "00", "9F", "4F", "16", "FF", "2F", "E1",
-"36", "A1", "2A", "A2", "0F", "F2", "4D", "03", "98", "47", "4F", "EA", "80", "04", "0F", "F2",
+"2A", "A1", "2A", "A2", "0F", "F2", "4D", "03", "98", "47", "4F", "EA", "80", "04", "0F", "F2",
 "45", "03", "98", "47", "4F", "EA", "10", "16", "44", "EA", "06", "04", "0F", "F2", "85", "03",
 "98", "47", "4F", "EA", "00", "14", "0F", "F2", "2D", "03", "98", "47", "4F", "EA", "90", "06",
 "44", "EA", "06", "04", "0F", "F2", "6D", "03", "98", "47", "4F", "EA", "80", "14", "0F", "F2",
@@ -33,17 +33,6 @@ decoderBytes = ["02", "00", "9F", "4F", "16", "FF", "2F", "E1",
 
 byteTable = {}
 
-offsetTable = {
-	"199":["7a"]*3+["64","2b"],
-	"1ED":["7a"]*4+["69"],
-	"2FB":["7a"]*6+["42","41"],
-	"421":["7a"]*8+["74","41"],
-	"573":["7a"]*11+["6e","2b"],
-	"6C9":["7a"]*14+["56","2b"],
-	"813":["7a"]*16+["76","61"],
-	"909":["7a"]*18+["78","61"],
-}
-
 def check(key,value):
 	v = 0x64
 	for i in value:
@@ -51,7 +40,7 @@ def check(key,value):
 	if(v!=-int(key,16)):
 		print("Error with "+key)
 
-def calculate(v):
+def calculateOffsets(v):
 	value = int(v,16)
 	value+=0x64
 	count = int(value/0x7a)
@@ -81,7 +70,7 @@ def calculate(v):
 				if isValid("%0.2X"%value):
 					result.append("%0.2X"%value)
 				else:
-					print("Invalid 1 0x%0.2X"%value)
+					print("Error 1: 0x%0.2X Not Implemented"%value)
 					exit()
 			elif value<0x2b:
 				count-=1
@@ -96,10 +85,10 @@ def calculate(v):
 						result.append("2b")
 						result.append("%0.2X"%value)	
 					else:
-						print("Invalid 2 0x%0.2X"%value)
+						print("Error 2: 0x%0.2X Not Implemented"%value)
 						exit()
 			else:
-				print("Invalid 3 0x%0.2X"%value)
+				print("Error 3: 0x%0.2X Not Implemented"%value)
 				exit()				
 	result=["7a"]*count+result
 	check(v,result)
@@ -167,7 +156,7 @@ def polymorphRange(bytesData):
 			offset+=1
 		string=section+string
 		section=[]
-		for i,v in enumerate(calculate("%0.2X"%(len(string)*4+len(bytes)-i+0x41+7))):
+		for i,v in enumerate(calculateOffsets("%0.2X"%(len(string)*4+len(bytes)-i+0x41+7))):
 			section.append("\tsubpl r5, "+("r7" if i==0 else "r5")+", #0x"+v)
 		section.append("\tsubpl r3, r7, #0x64")
 		section.append("\tsubpl r4, pc, r5, ror r3")
@@ -185,7 +174,10 @@ def polymorph(value, offset):
 createTable()
 
 payload = ""
-os.system("arm-linux-gnueabihf-as -o payload.o payload.s")
+if len(sys.argv)<2:
+	print("usage: python3 generate.py [payload source]")
+	exit()
+os.system("arm-linux-gnueabihf-as -o payload.o "+sys.argv[1])
 os.system("arm-linux-gnueabihf-objcopy --dump-section .text=payload.bin payload.o")
 with open("payload.bin","rb") as f:
 	payload=base64.b64encode(f.read()).replace(b"=",b"A")
@@ -219,11 +211,10 @@ data+="""
 	subpl r6, pc, r3, ror r5
 """
 
-data+=".byte 0x"+", 0x".join([byte if isValid(byte) else "%0.2X"%ord(randChar()) for byte in decoderBytes])
+data+="\t.byte 0x"+", 0x".join([byte if isValid(byte) else "%0.2X"%ord(randChar()) for byte in decoderBytes])
 
 data+="""
-output: .space """+str(int(len(payload)*0.75))+""", 0x31
-input: .ascii \""""+payload.decode()+"="+randChar().decode()*(4-((len(payload)+int(len(payload)*0.75)+1)%4))+"""\"
+	.ascii \""""+payload.decode()+"="+randChar().decode()*(4-(len(payload)+1)%4)+"""\"
 """
 
 with open("arm.s","wb+") as f:
