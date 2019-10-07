@@ -4,7 +4,6 @@
 	add r2, pc, #168
 
 base64_decode:
-	.byte
 	add r3, pc, #77
 	blx r3
 	lsl r4, r0, #2
@@ -35,7 +34,6 @@ next:
 	ldrb r0, [r1]
 	cmp r0, #'='
 	itt eq
-	#adreq r3, output
 	addeq r3, pc, #80
 	bxeq r3
 	add r1, #1
